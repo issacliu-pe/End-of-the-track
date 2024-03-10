@@ -8,8 +8,26 @@ class GenerateGrid(UserControl):
     def __init__(self, difficulty):
         self.grid = Column(opacity=0, animate_opacity=300)
         self.blue_titles: int = 0
+        self.correct: int = 0
+        self.incorrect: int = 0
         self.difficulty: int = difficulty
         super().__init__()
+
+    def show_color(self, e):
+        # when player click a box, check to see if the original color was blue or not
+        if e.control.data == "#4cbbb5":
+            e.control.bgcolor = "#4cbbb5"
+            e.control.opacity = 1
+            e.control.update()
+            # we also need to increment the self.correct
+            self.correct += 1
+            e.page.update()
+        else:
+            e.control.bgcolor = "#982c33"
+            e.control.opacity = 1
+            e.control.update()
+            self.incorrect += 1
+            e.page.update()
 
     def build(self):
         # grid (4r x 4c)
@@ -22,7 +40,7 @@ class GenerateGrid(UserControl):
                         height=54,
                         animate=300,
                         # border=border.all(1, "white"),
-                        on_click=None, # change later
+                        on_click=lambda e: self.show_color(e),
                     )
                     for _ in range(5)
 
@@ -75,6 +93,9 @@ def main(page: ft.page):
 
     # set up the game loop
     def start_game(e, level):
+        # clear the title
+        result.value = ""
+
         # create a variable of the instance
         grid = level
         page.controls.insert(3, grid)
@@ -91,13 +112,57 @@ def main(page: ft.page):
         start_button.disabled = True
         start_button.update()
 
-        time.sleep(1.5) # time for how long the blue tiles are shown
+        time.sleep(1) # time for how long the blue tiles are shown
 
         # after 1.5 seconds, hide the blue tiles
         for rows in grid.controls[0].controls[:]:
             for container in rows.controls[:]:
                 if container.bgcolor == "#4cbbb5":
-                    pass # implement this later
+                    container.bgcolor = "#5c443b"
+                    container.update()
+
+
+        # last thing, handle the updates we get from the class everytime a user clicks a box
+        while True:
+            if grid.correct == grid.blue_titles:
+                # first disable the grid to prevent more clicking
+                grid.grid.disabled: bool = True
+                grid.grid.update()
+
+                # update the win title
+                result.value: str = "You Win!"
+                result.color = "green700"
+                result.update()
+
+                # sleep before clearing the screen
+                time.sleep(2)
+                result.value = ""
+                page.controls.remove(grid) # remove instance
+                page.update()
+
+                # increase the difficulty
+                difficulty = grid.difficulty + 1
+
+                # call the strat_game fun again to play the next round
+                start_game(e, GenerateGrid(difficulty))
+                break
+
+            # now check if the user runs out of guess
+            if grid.incorrect == 3:
+                result.value = "You loss!"
+                result.color = "red700"
+                result.update()
+                time.sleep(2)
+                page.controls.remove(grid)
+                page.update()
+                start_button.disabled = False
+                start_button.update()
+                break
+
+
+
+
+
 
     #main page add
     page.add(
